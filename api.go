@@ -9,21 +9,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-//HandlerFunc decorator impl to handle error
-type apiFunc func(http.ResponseWriter, *http.Request) error 
-type apiError struct {
-	Error string
-}
-
-func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request){
-		if err := f(w,r); err != nil {
-			writeJSON( w, http.StatusBadRequest, apiError{ Error: err.Error()} )
-		}
-	}
-}
-//
-
 type APIServer struct{
 	listenAddress string
 }
@@ -82,6 +67,21 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
+//HandlerFunc decorator impl to handle error
+type apiFunc func(http.ResponseWriter, *http.Request) error 
+type apiError struct {
+	Error string
+}
+
+func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request){
+		if err := f(w,r); err != nil {
+			writeJSON( w, http.StatusBadRequest, apiError{ Error: err.Error()} )
+		}
+	}
+}
+//
+
 //Func to set Header and send JSON-formatted responses
 func writeJSON(w http.ResponseWriter, status int , v any) error {
 	w.WriteHeader(status)
@@ -89,3 +89,4 @@ func writeJSON(w http.ResponseWriter, status int , v any) error {
 	return json.NewEncoder(w).Encode(v)
 
 } 
+
