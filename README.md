@@ -1,4 +1,4 @@
-###API development in Golang
+## JSON API development in Golang
 
 Implementing a Json API in Golang
 
