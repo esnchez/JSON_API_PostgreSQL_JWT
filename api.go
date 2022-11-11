@@ -32,13 +32,14 @@ func (s *APIServer) Run() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/account", makeHTTPHandleFunc(s.handleAccount))
+	router.HandleFunc("/account/{id}", makeHTTPHandleFunc(s.handleGetAccountByID))
 
 	log.Println("Server running on port", s.listenAddress)
 	http.ListenAndServe(s.listenAddress, router)
 
 }
 
-// this func will derive to specific function depending on HTTP method
+// this func will derive to specific function depending on HTTP method on /account path
 func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
 	if r.Method == "GET" {
 		return s.handleGetAccount(w, r)
@@ -52,13 +53,31 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 	return fmt.Errorf("method not allowed %s,", r.Method)
 }
 
+//CRUD functions
 func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
+	acc,err := s.store.GetAccount(); 
+	if err != nil {
+		return err
+	}
+	return writeJSON(w, http.StatusOK, acc)
+}
+
+func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request) error {
 	account := NewAccount("Rick", "Sanchez")
 	return writeJSON(w, http.StatusOK, account)
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
-	return nil
+	requestedAcc := new(Account)
+	if err := json.NewDecoder(r.Body).Decode(requestedAcc); err != nil {
+		return err
+	}
+
+	account := NewAccount(requestedAcc.FirstName,requestedAcc.SecondName)
+	if err := s.store.CreateAccount(account); err != nil {
+		return err
+	}
+	return writeJSON(w, http.StatusOK, account)
 }
 
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
@@ -69,6 +88,7 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
+//HELPER Functions 
 // HandlerFunc decorator impl to handle error
 type apiFunc func(http.ResponseWriter, *http.Request) error
 type apiError struct {
@@ -82,7 +102,6 @@ func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 		}
 	}
 }
-
 //
 
 // Func to set Header and send JSON-formatted responses
