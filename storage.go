@@ -14,7 +14,6 @@ type Storage interface {
 	DeleteAccount(int) error
 	GetAccountByID(int) (*Account, error)
 	GetAccount() ([]*Account, error)
-
 }
 
 type PostgresStore struct {
@@ -40,7 +39,7 @@ func NewPostgresStorage() (*PostgresStore, error) {
 
 }
 
-//Creating a table to the Postgres DB
+// Creating a table to the Postgres DB
 func (s *PostgresStore) Init() error {
 	return s.CreateAccountTable()
 }
@@ -61,17 +60,15 @@ func (s *PostgresStore) CreateAccountTable() error {
 
 }
 
-
-
-//Storage interface implementation
+// Storage interface implementation
 func (s *PostgresStore) CreateAccount(acc *Account) error {
-	
+
 	query := `insert into account (
 		first_name, second_name, number, balance, created_at)
 		 values ( $1, $2, $3, $4, $5)`
 
-	resp , err := s.db.Query(query, acc.FirstName, acc.SecondName, acc.Number, acc.Balance, acc.CreatedAt)
-	if err != nil{
+	resp, err := s.db.Query(query, acc.FirstName, acc.SecondName, acc.Number, acc.Balance, acc.CreatedAt)
+	if err != nil {
 		return err
 	}
 
@@ -84,18 +81,21 @@ func (s *PostgresStore) UpdateAccount(*Account) error {
 }
 
 func (s *PostgresStore) DeleteAccount(id int) error {
-	return nil
+
+	query := `delete from account where id = $1`
+	_, err := s.db.Exec(query, id)
+	return err
 }
 
 func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
-	
+
 	query := `select * from account where id=$1`
-	rows , err := s.db.Query(query,id)
-	if err != nil{
+	rows, err := s.db.Query(query, id)
+	if err != nil {
 		return nil, err
 	}
 
-	for rows.Next(){
+	for rows.Next() {
 		return scanRow(rows)
 	}
 	return nil, fmt.Errorf("Account %d not found", id)
@@ -104,17 +104,17 @@ func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
 func (s *PostgresStore) GetAccount() ([]*Account, error) {
 	query := `select * from account`
 
-	rows , err := s.db.Query(query)
-	if err != nil{
+	rows, err := s.db.Query(query)
+	if err != nil {
 		return nil, err
 	}
 	accounts := []*Account{}
-	for rows.Next(){
+	for rows.Next() {
 		account, err := scanRow(rows)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-		accounts = append(accounts, account )
+		accounts = append(accounts, account)
 	}
 	return accounts, nil
 }
@@ -128,6 +128,6 @@ func scanRow(rows *sql.Rows) (*Account, error) {
 		&account.Number,
 		&account.Balance,
 		&account.CreatedAt,
-	); 	
+	)
 	return account, err
 }
