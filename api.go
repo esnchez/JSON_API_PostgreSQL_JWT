@@ -34,6 +34,8 @@ func (s *APIServer) Run() {
 
 	router.HandleFunc("/account", makeHTTPHandleFunc(s.handleAccount))
 	router.HandleFunc("/account/{id}", makeHTTPHandleFunc(s.handleAccountByID))
+	router.HandleFunc("/transfer", makeHTTPHandleFunc(s.handleTransfer))
+
 
 	log.Println("Server running on port", s.listenAddress)
 	http.ListenAndServe(s.listenAddress, router)
@@ -91,12 +93,12 @@ func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
-	requestedAcc := new(Account)
-	if err := json.NewDecoder(r.Body).Decode(requestedAcc); err != nil {
+	reqAccount := new(Account)
+	if err := json.NewDecoder(r.Body).Decode(reqAccount); err != nil {
 		return err
 	}
 
-	account := NewAccount(requestedAcc.FirstName, requestedAcc.SecondName)
+	account := NewAccount(reqAccount.FirstName, reqAccount.SecondName)
 	if err := s.store.CreateAccount(account); err != nil {
 		return err
 	}
@@ -116,7 +118,13 @@ func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error {
-	return nil
+
+		reqTransfer := new(TransferRequest)
+		if err := json.NewDecoder(r.Body).Decode(reqTransfer); err != nil {
+			return err
+		} 
+		return writeJSON(w, http.StatusOK, reqTransfer)
+
 }
 
 // HELPER Functions
@@ -133,8 +141,6 @@ func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 		}
 	}
 }
-
-//
 
 // Func to set Header and send JSON-formatted responses
 func writeJSON(w http.ResponseWriter, status int, v any) error {

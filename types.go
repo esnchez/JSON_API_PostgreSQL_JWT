@@ -15,6 +15,11 @@ type Account struct {
 	CreatedAt  time.Time `json:"createdAt"`
 }
 
+type TransferRequest struct {
+	ToAccount int64 `json:"toAccount"`
+	Amount    int   `json:"amount"`
+}
+
 // constructor, not going to use id random but the incremental id provided by Postgres
 func NewAccount(firstName string, secondName string) *Account {
 	return &Account{
