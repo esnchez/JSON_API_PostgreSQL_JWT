@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
 )
 
@@ -88,6 +90,7 @@ func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		return err
 	}
+
 	return writeJSON(w, http.StatusOK, acc)
 
 }
@@ -102,6 +105,14 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 	if err := s.store.CreateAccount(account); err != nil {
 		return err
 	}
+
+	key := []byte(os.Getenv("SECRET_KEY"))
+	token, err := createJWT(account,key)
+	if err != nil{
+		return err
+	}
+	fmt.Println("token string: ",token)
+
 	return writeJSON(w, http.StatusOK, account)
 }
 
@@ -114,6 +125,7 @@ func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) 
 	if err := s.store.DeleteAccount(id); err != nil {
 		return err
 	}
+
 	return writeJSON(w, http.StatusOK, map[string]int{"deleted": id})
 }
 
@@ -149,6 +161,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) error {
 	return json.NewEncoder(w).Encode(v)
 }
 
+//Func to get id from get request (string) and convert it to int
 func getID(r *http.Request) (int, error) {
 	idStr := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(idStr)
@@ -157,3 +170,35 @@ func getID(r *http.Request) (int, error) {
 	}
 	return id, nil
 }
+
+//Func to decorate our handlers and implement JWT authorisation
+func withJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request){
+
+
+
+
+		handlerFunc(w,r)
+	} 
+}
+
+//Func to check JWT 
+func validateJWT(tokenString string) (*jwt.Token, error) {
+	return nil, nil
+}
+
+//Func to create jwt token 
+func createJWT(account *Account,secretKey []byte) (string, error) {
+
+	// Create a new token object, specifying signing method and the desired claims
+	claims := &jwt.MapClaims{
+		"ExpiresAt": 15000,
+		"AccountNumber": account.Number,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	// Sign and get the complete encoded token as a string using the secret
+	return token.SignedString(secretKey)
+}
+
+
