@@ -35,7 +35,7 @@ func (s *APIServer) Run() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/account", makeHTTPHandleFunc(s.handleAccount))
-	router.HandleFunc("/account/{id}", makeHTTPHandleFunc(s.handleAccountByID))
+	router.HandleFunc("/account/{id}", withJWTAuth(makeHTTPHandleFunc(s.handleAccountByID)))
 	router.HandleFunc("/transfer", makeHTTPHandleFunc(s.handleTransfer))
 
 
@@ -106,8 +106,7 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 
-	key := []byte(os.Getenv("SECRET_KEY"))
-	token, err := createJWT(account,key)
+	token, err := createJWT(account)
 	if err != nil{
 		return err
 	}
@@ -176,20 +175,41 @@ func withJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request){
 
-
-
-
+		tokenReq := r.Header.Get("jwt-token")
+		_, err := validateJWT(tokenReq)
+		if err != nil {
+			writeJSON(w, http.StatusForbidden, apiError{Error: "permission denied"})
+			return 
+		}
+		// fmt.Println("Received token is valid: ", token)
 		handlerFunc(w,r)
 	} 
 }
 
 //Func to check JWT 
 func validateJWT(tokenString string) (*jwt.Token, error) {
-	return nil, nil
+	secretKey := []byte(os.Getenv("SECRET_KEY"))
+
+	// Parse takes the token string and a function for looking up the key. The latter is especially
+	// useful if you use multiple keys for your application.  The standard is to use 'kid' in the
+	// head of the token to identify which key to use, but the parsed token (head and claims) is provided
+	// to the callback, providing flexibility.
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Don't forget to validate the alg is what you expect:
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+
+		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
+		return secretKey, nil
+	})
+
+	return token, err
 }
 
 //Func to create jwt token 
-func createJWT(account *Account,secretKey []byte) (string, error) {
+func createJWT(account *Account) (string, error) {
+	secretKey := []byte(os.Getenv("SECRET_KEY"))
 
 	// Create a new token object, specifying signing method and the desired claims
 	claims := &jwt.MapClaims{
