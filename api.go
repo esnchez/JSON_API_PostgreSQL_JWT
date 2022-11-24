@@ -186,7 +186,7 @@ func withJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	} 
 }
 
-//Func to check JWT 
+//Func to check JWT is signed the way the created it
 func validateJWT(tokenString string) (*jwt.Token, error) {
 	secretKey := []byte(os.Getenv("SECRET_KEY"))
 
